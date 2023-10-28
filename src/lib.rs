@@ -1,14 +1,12 @@
-use std::{
-    cell::RefCell,
-    rc::Rc,
-    time::{Duration, Instant},
-};
+use std::{cell::RefCell, rc::Rc};
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
 
+#[cfg(target_arch = "wasm32")]
+use js_sys::{Float32Array, Function};
 // mod vertex;
 // use vertex::*;
 
@@ -35,28 +33,22 @@ pub async fn run() {
         .build(&event_loop)
         .unwrap();
     let window_ref = Rc::new(RefCell::new(window));
-    let window_clone = window_ref.clone();
 
     #[cfg(target_arch = "wasm32")]
     {
-        // resize_window(&window);
+        let window_clone = window_ref.clone();
         resize_window(&window_clone);
         use winit::platform::web::WindowExtWebSys;
         web_sys::window()
             .and_then(|win| win.document())
             .and_then(|doc| {
                 let dst = doc.get_element_by_id("canvas-div")?;
-                // if let Some(canvas) = window.canvas() {
                 let canvas = window_clone.borrow().canvas();
                 let canvas_element = web_sys::Element::from(canvas);
                 dst.append_child(&canvas_element).ok()?;
 
                 let w = web_sys::window().expect("should have a Window");
-                // let canvas = window.canvas();
-                // resize_canvas(&canvas);
-
                 let closure = Closure::wrap(Box::new(move || {
-                    // log::warn!("resize_canvas");
                     resize_window(&window_clone);
                 }) as Box<dyn FnMut()>);
 
@@ -70,6 +62,75 @@ pub async fn run() {
     }
 
     let mut renderer = Renderer::new(window_ref).await;
+
+    #[cfg(target_arch = "wasm32")]
+    {
+        use glicol::Engine;
+        let mut engine = Engine::<128>::new();
+        let mut engine_ref = Rc::new(RefCell::new(engine));
+        let mut engine_ref2 = engine_ref.clone();
+        renderer.add_audio_engine(engine_ref2);
+        engine_ref
+            .borrow_mut()
+            .update_with_code(r#"o: speed 16.0 >> seq 60 >> hh 0.03"#);
+        // let mut sine = SineWave::new(440.0);
+        // let mut phase = 0.0;
+        let window = web_sys::window().expect("no global `window` exists");
+        let this = JsValue::null();
+        let start = window
+            .get("audioStart")
+            .unwrap()
+            .dyn_into::<Function>()
+            .unwrap();
+        start.call0(&this).unwrap();
+
+        let sab = window
+            .get("dataSAB")
+            .unwrap()
+            .dyn_into::<js_sys::SharedArrayBuffer>()
+            .unwrap();
+        let buf = Float32Array::new(&sab);
+        let write_ptr = JsValue::from(
+            window
+                .get("writePtr")
+                .unwrap()
+                .dyn_into::<js_sys::Uint32Array>()
+                .unwrap(),
+        ); //.dyn_into::<js_sys::Uint32Array>().unwrap();
+        let read_ptr = JsValue::from(
+            window
+                .get("readPtr")
+                .unwrap()
+                .dyn_into::<js_sys::Uint32Array>()
+                .unwrap(),
+        ); //.dyn_into::<js_sys::Uint32Array>().unwrap();
+
+        let f = Rc::new(RefCell::new(None));
+        let g = f.clone();
+        *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
+            loop {
+                let wr = js_sys::Atomics::load(&write_ptr, 0).unwrap();
+                let rd = js_sys::Atomics::load(&read_ptr, 0).unwrap();
+                let available_read = (wr + 2048 - rd) % 2048;
+                let available_write = 2048 - available_read;
+                if available_write <= 128 {
+                    break;
+                }
+                let mut engine_borrow = engine_ref.borrow_mut();
+                let (block, _console_info) = engine_borrow.next_block(vec![]);
+
+                for i in 0..128 {
+                    let wr = js_sys::Atomics::load(&write_ptr, 0).unwrap();
+                    let val = block[0][i];
+                    buf.set_index(wr as u32, val);
+                    js_sys::Atomics::store(&write_ptr, 0, (wr + 1) % (2048)).unwrap();
+                }
+            }
+            request_animation_frame(f.borrow().as_ref().unwrap());
+        }) as Box<dyn FnMut()>));
+
+        request_animation_frame(g.borrow().as_ref().unwrap());
+    }
 
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent {
@@ -100,13 +161,6 @@ pub async fn run() {
         Event::RedrawRequested(window_id) if window_id == renderer.window().borrow().id() => {
             renderer.update();
             renderer.render().unwrap();
-
-            // #[cfg(target_arch = "wasm32")]
-            // {
-            //     resize_window(renderer.window());
-            // }
-            // let new_size = renderer.window().inner_size();
-            // renderer.resize(new_size);
         }
         _ => {}
     });
@@ -127,22 +181,32 @@ fn resize_window(window: &Rc<RefCell<winit::window::Window>>) {
         .set_inner_size(PhysicalSize::new(width, height));
 }
 
-// #[cfg(target_arch = "wasm32")]
-// fn resize_canvas(canvas: &web_sys::HtmlCanvasElement) {
-//     let window = web_sys::window().expect("should have a Window");
-//     let width = window.inner_width().unwrap().as_f64().unwrap() as u32;
-//     let height = window.inner_height().unwrap().as_f64().unwrap() as u32;
+#[cfg(target_arch = "wasm32")]
+fn request_animation_frame(f: &Closure<dyn FnMut()>) {
+    web_sys::window()
+        .expect("REASON")
+        .request_animation_frame(f.as_ref().unchecked_ref())
+        .expect("should register `requestAnimationFrame` OK");
+}
 
-//     // 调整 canvas 的属性宽高
-//     canvas.set_width(width);
-//     canvas.set_height(height);
+#[cfg(target_arch = "wasm32")]
+struct SineWave {
+    phase: f32,
+    freq: f32,
+}
 
-//     // 调整 canvas 的样式宽高
-//     let style = canvas.style();
-//     style
-//         .set_property("width", &format!("{}px", width))
-//         .unwrap();
-//     style
-//         .set_property("height", &format!("{}px", height))
-//         .unwrap();
-// }
+#[cfg(target_arch = "wasm32")]
+impl SineWave {
+    fn new(freq: f32) -> Self {
+        Self { phase: 0.0, freq }
+    }
+
+    fn next_sample(&mut self) -> Option<[f32; 2]> {
+        let val = (self.phase * 2.0 * std::f32::consts::PI).sin();
+        self.phase += self.freq / 44100.0;
+        if self.phase > 1.0 {
+            self.phase -= 1.0;
+        }
+        Some([val, val])
+    }
+}

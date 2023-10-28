@@ -9,6 +9,11 @@
     <style>
         canvas {
             background-color: transparent;
+            outline: none;
+        }
+
+        #canvas-div {
+            outline: none;
         }
 
         html, body {
@@ -23,12 +28,12 @@
 <body id="wasm-example">
     <!-- <h1>Hello</h1> -->
     <div id="canvas-div"></div>
+    <script src="./app.js"></script>
     <script type="module">
-            console.log(42)
-            import init from "./pkg/glicol_editor.js";
-            init().then(() => {
-                console.log("WASM Loaded");
-            });
+        import init from "./pkg/glicol_editor.js";
+        init().then(() => {
+            console.log("WASM Loaded");
+        });
     </script>
 </body>
 

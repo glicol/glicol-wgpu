@@ -3,7 +3,6 @@ name = "glicol-editor"
 version = "0.1.0"
 edition = "2021"
 
-
 [lib]
 crate-type = ["cdylib", "rlib"]
 
@@ -17,15 +16,15 @@ tracing-subscriber = { version = "^0.3.16", features = ["env-filter"] }
 guillotiere = "0.6.2"
 glam = "0.24.2"
 hashbrown = "0.14.1"
-
+log = "0.4.20"
 anyhow = "1.0.75"
 wgpu-types = "0.18.0"
+glicol = "0.13.2"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1.32.0", features = ["full"] }
 wgpu = "0.17.1"
 cpal = "0.15.2"
-glicol = "0.13.2"
 glicol_synth = "0.13.2"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -34,5 +33,13 @@ console_log = "1.0"
 wgpu = { version = "0.17.1", features = ["webgl"] }
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["Document", "Window", "Element"] }
-log = "0.4.20"
+web-sys = { version = "0.3", features = [
+    "CanvasRenderingContext2d",
+    "Document",
+    "Element",
+    "HtmlCanvasElement",
+    "HtmlDocument",
+    "Performance",
+    "Window",
+] }
+js-sys = { version = "0.3.61" }

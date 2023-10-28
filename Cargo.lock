@@ -828,6 +828,7 @@ dependencies = [
  "glicol_synth",
  "guillotiere",
  "hashbrown 0.14.2",
+ "js-sys",
  "log",
  "tokio",
  "tracing",
