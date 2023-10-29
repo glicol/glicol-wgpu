@@ -21,6 +21,7 @@ pub use renderer::*;
 
 // mod behaviour;
 // use behaviour::*;
+
 // #[cfg(not(target_arch = "wasm32"))]
 // mod audio;
 // #[cfg(not(target_arch = "wasm32"))]
@@ -77,8 +78,6 @@ pub async fn run() {
         engine_ref
             .borrow_mut()
             .update_with_code(r#"o: speed 16.0 >> seq 60 >> hh 0.03"#);
-        // let mut sine = SineWave::new(440.0);
-        // let mut phase = 0.0;
         let window = web_sys::window().expect("no global `window` exists");
         let this = JsValue::null();
         let start = window
@@ -87,7 +86,6 @@ pub async fn run() {
             .dyn_into::<Function>()
             .unwrap();
         start.call0(&this).unwrap();
-
         let sab = window
             .get("dataSAB")
             .unwrap()
@@ -100,14 +98,14 @@ pub async fn run() {
                 .unwrap()
                 .dyn_into::<js_sys::Uint32Array>()
                 .unwrap(),
-        ); //.dyn_into::<js_sys::Uint32Array>().unwrap();
+        );
         let read_ptr = JsValue::from(
             window
                 .get("readPtr")
                 .unwrap()
                 .dyn_into::<js_sys::Uint32Array>()
                 .unwrap(),
-        ); //.dyn_into::<js_sys::Uint32Array>().unwrap();
+        );
 
         let f = Rc::new(RefCell::new(None));
         let g = f.clone();

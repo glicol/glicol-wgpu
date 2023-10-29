@@ -91,7 +91,9 @@ impl Renderer {
         let b = include_bytes!("FiraCode-Regular.ttf") as &[u8];
         let font = fontdue::Font::from_bytes(b, fontdue::FontSettings::default()).unwrap();
 
-        let char_list: Vec<char> = "o: sin 440 >> mul 0.1".chars().collect();
+        let char_list: Vec<char> = "o: sin 440 >> mul 0.1   three spaces\n\nb: sin 441 >> mul 0.1"
+            .chars()
+            .collect();
 
         let (render_pipeline, vertex_buffer, index_buffer, num_indices, diffuse_bind_group) =
             crate::utils::update_renderer(&window, &device, &config, &queue, &char_list, &font);

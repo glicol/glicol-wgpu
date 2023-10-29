@@ -1,5 +1,5 @@
 window.ctx = new AudioContext();
-ctx.suspend();
+// ctx.suspend();
 
 function URLFromFiles(files) {
     const promises = files.map((file) =>
@@ -14,7 +14,7 @@ function URLFromFiles(files) {
     });
 }
 
-URLFromFiles(["processor.js"]).then((e) => {
+URLFromFiles(["./processor.js"]).then((e) => {
   if (ctx.audioWorklet === undefined) {
     log("No AudioWorklet.");
   } else {

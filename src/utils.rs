@@ -1,9 +1,3 @@
-// self.render_pipeline = render_pipeline;
-// self.vertex_buffer = vertex_buffer;
-// self.index_buffer = index_buffer;
-// self.num_indices = num_indices;
-// self.diffuse_bind_group = diffuse_bind_group;
-
 use std::{cell::RefCell, char, rc::Rc};
 
 use fontdue::Font;
@@ -49,58 +43,56 @@ pub fn update_renderer(
     let mut indices = Vec::new();
 
     let mut line_shift = 0.0; // shift caused by \n character
-    let mut x_offset = 0.;
+    let mut x_offset = 32.0 / window.borrow().inner_size().width as f32 * 96. / 72.;
     let mut bypass_count = 0; // \n is not rendered, so we need to skip it
 
     for (i, ch) in char_list.iter().enumerate() {
-        let (metrics, bitmap) = font.rasterize(*ch, font_size);
+        let i = i - bypass_count;
 
-        // tracing::warn!("\n\n {:?}, Metrics {:?}\n\n", ch, metrics);
-        let size = Size::new(
-            metrics.width as i32 + padding * 2,
-            metrics.height as i32 + padding * 2,
-        );
+        if *ch == '\n' {
+            let (metrics, _bitmap) = font.rasterize(*ch, font_size);
+            line_shift +=
+                metrics.height as f32 / window.borrow().inner_size().height as f32 * 96. / 72.;
+            x_offset = 32.0 / window.borrow().inner_size().width as f32 * 96. / 72.;
+            bypass_count += 1; // skip the newline character
+                               // if i + bypass_count - 1 < char_list.len()
+                               //     && (char_list[i + bypass_count - 1] == '\n')
+                               //     && cursors.contains(&(i as u32 + bypass_count as u32))
+                               // {
+                               //     cursor_positions.push((x_offset, metrics.ymin as f32 / 600. - line_shift));
+                               // }
+                               // edge case
+                               // if char_list.len() > 0 {
+                               //     if cursors.contains(&0) && char_list[0] == '\n' {
+                               //         cursor_positions.push((x_offset, metrics.ymin as f32 / 600.));
+                               //     }
+                               // }
+            continue;
+        } else if *ch == ' ' {
+            // Handle space character
+            let (metrics, _) = font.rasterize(*ch, font_size);
 
-        let char_width = metrics.width as f32 / window.borrow().inner_size().width as f32;
-        let char_height = (metrics.height as f32) / window.borrow().inner_size().height as f32;
-        let y_offset =
-            metrics.ymin as f32 / window.borrow().inner_size().height as f32 - line_shift;
-        let font_size_scale = font_size / window.borrow().inner_size().height as f32;
-
-        if let Some(allocation) = allocator.allocate(size) {
-            // tracing::warn!("\n\n allocation.rectangle {:?}\n\n", allocation.rectangle);
-
-            let encoder = device.create_command_encoder(&CommandEncoderDescriptor {
-                label: Some("Texture Upload Encoder"),
-            });
-            queue.write_texture(
-                wgpu::ImageCopyTexture {
-                    texture: &texture,
-                    mip_level: 0,
-                    origin: wgpu::Origin3d {
-                        x: allocation.rectangle.min.x as u32 + padding as u32,
-                        y: allocation.rectangle.min.y as u32 + padding as u32,
-                        z: 0,
-                    },
-                    aspect: wgpu::TextureAspect::All,
-                },
-                &bitmap,
-                wgpu::ImageDataLayout {
-                    offset: 0,
-                    bytes_per_row: Some(metrics.width as u32),
-                    rows_per_image: None,
-                },
-                wgpu::Extent3d {
-                    width: metrics.width as u32,
-                    height: metrics.height as u32,
-                    depth_or_array_layers: 1,
-                },
-            );
-            queue.submit(Some(encoder.finish()));
-            let top_left_x = (allocation.rectangle.min.x + padding) as f32 / 2048.;
-            let top_left_y = (allocation.rectangle.min.y + padding) as f32 / 2048.;
-            let bottom_right_x = (allocation.rectangle.max.x - padding) as f32 / 2048.;
-            let bottom_right_y = (allocation.rectangle.max.y - padding) as f32 / 2048.;
+            let top_left_x = 0.0;
+            let top_left_y = 0.0;
+            let bottom_right_x = 0.0;
+            let bottom_right_y = 0.0;
+            let char_width =
+                metrics.width as f32 / window.borrow().inner_size().width as f32 * 96. / 72.;
+            let char_height =
+                metrics.height as f32 / window.borrow().inner_size().height as f32 * 96. / 72.;
+            let y_offset =
+                metrics.ymin as f32 / window.borrow().inner_size().height as f32 * 96. / 72.;
+            let font_size_scale = 32.0 / window.borrow().inner_size().height as f32 * 96. / 72.;
+            // if cursors.contains(&(i as u32 + bypass_count as u32)) {
+            //     cursor_positions.push((x_offset, metrics.ymin as f32 / 600. - line_shift));
+            // }
+            // edge case: cursor is in the end of the line
+            // if cursors.contains(&(i as u32 + 1 + bypass_count as u32)) {
+            //     cursor_positions.push((
+            //         x_offset + metrics.advance_width / 800.0,
+            //         metrics.ymin as f32 / 600. - line_shift,
+            //     ));
+            // }
             vertices.extend_from_slice(&[
                 Vertex {
                     position: [
@@ -131,6 +123,8 @@ pub fn update_renderer(
                     tex_coords: [bottom_right_x, top_left_y],
                 },
             ]);
+            x_offset +=
+                metrics.advance_width / window.borrow().inner_size().width as f32 * 96. / 72.;
             indices.extend_from_slice(&[
                 0 + i as u16 * 4,
                 1 + i as u16 * 4,
@@ -139,9 +133,97 @@ pub fn update_renderer(
                 3 + i as u16 * 4,
                 0 + i as u16 * 4,
             ]);
-            x_offset += metrics.advance_width / window.borrow().inner_size().width as f32
         } else {
-            tracing::warn!("allocation failed");
+            let (metrics, bitmap) = font.rasterize(*ch, font_size);
+
+            // tracing::warn!("\n\n {:?}, Metrics {:?}\n\n", ch, metrics);
+            let size = Size::new(
+                metrics.width as i32 + padding * 2,
+                metrics.height as i32 + padding * 2,
+            );
+
+            let char_width = metrics.width as f32 / window.borrow().inner_size().width as f32;
+            let char_height = (metrics.height as f32) / window.borrow().inner_size().height as f32;
+            let y_offset =
+                metrics.ymin as f32 / window.borrow().inner_size().height as f32 - line_shift;
+            let font_size_scale = font_size / window.borrow().inner_size().height as f32;
+
+            if let Some(allocation) = allocator.allocate(size) {
+                // tracing::warn!("\n\n allocation.rectangle {:?}\n\n", allocation.rectangle);
+
+                let encoder = device.create_command_encoder(&CommandEncoderDescriptor {
+                    label: Some("Texture Upload Encoder"),
+                });
+                queue.write_texture(
+                    wgpu::ImageCopyTexture {
+                        texture: &texture,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d {
+                            x: allocation.rectangle.min.x as u32 + padding as u32,
+                            y: allocation.rectangle.min.y as u32 + padding as u32,
+                            z: 0,
+                        },
+                        aspect: wgpu::TextureAspect::All,
+                    },
+                    &bitmap,
+                    wgpu::ImageDataLayout {
+                        offset: 0,
+                        bytes_per_row: Some(metrics.width as u32),
+                        rows_per_image: None,
+                    },
+                    wgpu::Extent3d {
+                        width: metrics.width as u32,
+                        height: metrics.height as u32,
+                        depth_or_array_layers: 1,
+                    },
+                );
+                queue.submit(Some(encoder.finish()));
+                let top_left_x = (allocation.rectangle.min.x + padding) as f32 / 2048.;
+                let top_left_y = (allocation.rectangle.min.y + padding) as f32 / 2048.;
+                let bottom_right_x = (allocation.rectangle.max.x - padding) as f32 / 2048.;
+                let bottom_right_y = (allocation.rectangle.max.y - padding) as f32 / 2048.;
+                vertices.extend_from_slice(&[
+                    Vertex {
+                        position: [
+                            -1.0 + x_offset,
+                            char_height + y_offset + 1.0 - font_size_scale,
+                            0.0,
+                        ],
+                        tex_coords: [top_left_x, top_left_y],
+                    },
+                    Vertex {
+                        position: [-1.0 + x_offset, y_offset + 1.0 - font_size_scale, 0.0],
+                        tex_coords: [top_left_x, bottom_right_y],
+                    },
+                    Vertex {
+                        position: [
+                            char_width + x_offset - 1.0,
+                            y_offset + 1.0 - font_size_scale,
+                            0.0,
+                        ],
+                        tex_coords: [bottom_right_x, bottom_right_y],
+                    },
+                    Vertex {
+                        position: [
+                            char_width + x_offset - 1.0,
+                            char_height + y_offset + 1.0 - font_size_scale,
+                            0.0,
+                        ],
+                        tex_coords: [bottom_right_x, top_left_y],
+                    },
+                ]);
+                indices.extend_from_slice(&[
+                    0 + i as u16 * 4,
+                    1 + i as u16 * 4,
+                    2 + i as u16 * 4,
+                    2 + i as u16 * 4,
+                    3 + i as u16 * 4,
+                    0 + i as u16 * 4,
+                ]);
+                x_offset += metrics.advance_width / window.borrow().inner_size().width as f32
+            } else {
+                tracing::warn!("allocation failed");
+            }
         }
     }
 
