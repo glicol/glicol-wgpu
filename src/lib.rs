@@ -7,11 +7,15 @@ use winit::{
 
 #[cfg(target_arch = "wasm32")]
 use js_sys::{Float32Array, Function};
-// mod vertex;
-// use vertex::*;
+
+mod vertex;
+pub use vertex::*;
+
+mod utils;
+pub use utils::*;
 
 mod renderer;
-use renderer::*;
+pub use renderer::*;
 // mod font;
 // pub use font::*;
 
