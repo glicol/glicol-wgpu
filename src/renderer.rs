@@ -32,6 +32,7 @@ pub struct Renderer {
     font: fontdue::Font,
     audio_engine: Option<Rc<RefCell<glicol::Engine<128>>>>,
     bpm: f32,
+    cursors: Vec<usize>,
 }
 
 impl Renderer {
@@ -91,7 +92,7 @@ impl Renderer {
         let b = include_bytes!("FiraCode-Regular.ttf") as &[u8];
         let font = fontdue::Font::from_bytes(b, fontdue::FontSettings::default()).unwrap();
 
-        let char_list: Vec<char> = "o: sin 440 >> mul 0.1   three spaces\n\nb: sin 441 >> mul 0.1"
+        let char_list: Vec<char> = "o: sin 440 >> mul 0.1;\n\nb: sin  441 >> mul 0.1"
             .chars()
             .collect();
 
@@ -115,6 +116,7 @@ impl Renderer {
             font,
             audio_engine: None,
             bpm: 120.,
+            cursors: vec![0],
         }
     }
 
@@ -134,25 +136,254 @@ impl Renderer {
             self.config.height = new_size.height;
             self.surface.configure(&self.device, &self.config);
 
-            let (render_pipeline, vertex_buffer, index_buffer, num_indices, diffuse_bind_group) =
-                crate::utils::update_renderer(
-                    &self.window,
-                    &self.device,
-                    &self.config,
-                    &self.queue,
-                    &self.char_list,
-                    &self.font,
-                );
-            self.render_pipeline = render_pipeline;
-            self.vertex_buffer = vertex_buffer;
-            self.index_buffer = index_buffer;
-            self.num_indices = num_indices;
-            self.diffuse_bind_group = diffuse_bind_group;
+            self.update();
         }
     }
 
-    pub fn input(&mut self, event: &WindowEvent) -> bool {
-        self.request_position_change(event)
+    pub fn input(&mut self, event: &WindowEvent, modifiers: &ModifiersState) -> bool {
+        #[cfg(target_arch = "wasm32")]
+        if self.update_code(event, modifiers) {
+            return true;
+        }
+        if self.move_cursor(event) {
+            self.update();
+            return true;
+        } else if self.input_or_delete_character(event, modifiers) {
+            self.update();
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn update_code(&mut self, event: &WindowEvent, modifiers: &ModifiersState) -> bool {
+        // shift + enter to play the sound based on self.char_list
+        // log::warn!("try to play sound");
+        if let WindowEvent::KeyboardInput {
+            input:
+                KeyboardInput {
+                    state: ElementState::Pressed,
+                    virtual_keycode: Some(VirtualKeyCode::LAlt),
+                    ..
+                },
+            ..
+        } = event
+        {
+            // log::warn!("before shift");
+            // if modifiers.shift() {
+            log::warn!("play sound");
+            let code: String = self.char_list.iter().collect();
+            log::warn!("code: {}", code);
+            if let Some(engine) = &self.audio_engine {
+                let mut engine_borrow = engine.borrow_mut();
+                engine_borrow.update_with_code(&code);
+            }
+            return true;
+            // }
+        }
+        false
+    }
+
+    pub fn move_cursor(&mut self, event: &WindowEvent) -> bool {
+        match event {
+            WindowEvent::KeyboardInput {
+                input:
+                    KeyboardInput {
+                        state,
+                        virtual_keycode: Some(keycode),
+                        ..
+                    },
+                ..
+            } => {
+                // tracing::warn!("{:?}, keycode:::\n\n\n {:?}", state, keycode);
+            }
+            _ => {}
+        };
+        if let WindowEvent::KeyboardInput {
+            input:
+                KeyboardInput {
+                    state: ElementState::Pressed,
+                    virtual_keycode: Some(VirtualKeyCode::Left),
+                    ..
+                },
+            ..
+        } = event
+        {
+            tracing::warn!("move cursor left");
+            if self.cursors[0] > 0 {
+                self.cursors[0] -= 1;
+            }
+            tracing::warn!("cursors: {:?}", self.cursors);
+            true
+        } else if let WindowEvent::KeyboardInput {
+            input:
+                KeyboardInput {
+                    state: ElementState::Pressed,
+                    virtual_keycode: Some(VirtualKeyCode::Right),
+                    ..
+                },
+            ..
+        } = event
+        {
+            tracing::warn!("move cursor right");
+            if self.cursors[0] < self.char_list.len() {
+                self.cursors[0] += 1;
+            }
+            tracing::warn!("cursors: {:?}", self.cursors);
+            true
+        } else if let WindowEvent::KeyboardInput {
+            input:
+                KeyboardInput {
+                    state: ElementState::Pressed,
+                    virtual_keycode: Some(VirtualKeyCode::Up),
+                    ..
+                },
+            ..
+        } = event
+        {
+            tracing::warn!("move cursor up");
+            let mut pos = self.cursors[0] as usize;
+
+            // Find the start of the current line
+            while pos > 0 && self.char_list[pos - 1] != '\n' {
+                pos -= 1;
+            }
+            let current_line_pos = self.cursors[0] as usize - pos;
+
+            // If we're at the start of the text, we don't move
+            if pos == 0 {
+                return true;
+            }
+
+            let mut new_pos = pos - 2; // Move to the previous character from the start of the current line
+            let mut prev_line_start = 0;
+            let mut prev_line = 0;
+
+            // Find the start of the previous line
+            while new_pos > 0 {
+                if self.char_list[new_pos] == '\n' {
+                    prev_line += 1;
+                    if prev_line == 1 {
+                        prev_line_start = new_pos + 1; // After the '\n' character
+                        break;
+                    }
+                }
+                new_pos -= 1;
+            }
+
+            let target_pos = prev_line_start + current_line_pos;
+
+            // If the target position exceeds the start of the current line, set it to the end of the previous line
+            if target_pos >= pos {
+                self.cursors[0] = pos - 1; // Just before the current line's start
+            } else {
+                self.cursors[0] = target_pos;
+            }
+
+            true
+        } else if let WindowEvent::KeyboardInput {
+            input:
+                KeyboardInput {
+                    state: ElementState::Pressed,
+                    virtual_keycode: Some(VirtualKeyCode::Down),
+                    ..
+                },
+            ..
+        } = event
+        {
+            tracing::warn!("move cursor down");
+            let mut pos = self.cursors[0] as usize;
+
+            // Find the start of the current line
+            while pos > 0 && self.char_list[pos - 1] != '\n' {
+                pos -= 1;
+            }
+            let current_line_pos = self.cursors[0] as usize - pos;
+
+            let mut new_pos = self.cursors[0] as usize;
+            let mut new_line = 0;
+            let mut new_line_pos = 0;
+
+            while new_pos <= self.char_list.len() {
+                if new_pos == self.char_list.len() {
+                    self.cursors[0] = new_pos;
+                    break;
+                }
+                if self.char_list[new_pos] == '\n' {
+                    new_line += 1;
+                }
+                if new_line == 1 {
+                    if new_line_pos == current_line_pos {
+                        self.cursors[0] = new_pos + 1;
+                        break;
+                    }
+                    new_line_pos += 1;
+                } else if new_line == 2 {
+                    self.cursors[0] = new_pos;
+                    break;
+                }
+                new_pos += 1;
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn input_or_delete_character(
+        &mut self,
+        event: &WindowEvent,
+        modifiers: &ModifiersState,
+    ) -> bool {
+        match event {
+            WindowEvent::KeyboardInput {
+                input:
+                    KeyboardInput {
+                        state,
+                        virtual_keycode: Some(keycode),
+                        ..
+                    },
+                ..
+            } => {
+                // tracing::warn!("{:?}, keycode:::\n\n\n {:?}", state, keycode);
+            }
+            _ => {}
+        };
+        if let WindowEvent::KeyboardInput {
+            input:
+                KeyboardInput {
+                    state: ElementState::Pressed,
+                    virtual_keycode: Some(VirtualKeyCode::Back),
+                    ..
+                },
+            ..
+        } = event
+        {
+            tracing::warn!("delete character");
+            if self.cursors[0] >= 1 {
+                self.char_list.remove(self.cursors[0] as usize - 1);
+                if self.cursors[0] >= 1 {
+                    self.cursors[0] -= 1;
+                }
+            } else {
+                // cursor is at the beginning
+                if self.char_list.len() > 0 {
+                    self.char_list.remove(0);
+                }
+            }
+            true
+        } else {
+            let c = crate::get_char_from_event(event, modifiers);
+            if let Some(c) = c {
+                tracing::warn!("add character: {:?}", c);
+                self.char_list.insert(self.cursors[0] as usize, c);
+                self.cursors[0] += 1;
+                true
+            } else {
+                false
+            }
+        }
     }
 
     fn request_position_change(&mut self, event: &WindowEvent) -> bool {
@@ -211,6 +442,20 @@ impl Renderer {
         //     0,
         //     bytemuck::cast_slice(&[self.position]),
         // );
+        (
+            self.render_pipeline,
+            self.vertex_buffer,
+            self.index_buffer,
+            self.num_indices,
+            self.diffuse_bind_group,
+        ) = crate::utils::update_renderer(
+            &self.window,
+            &self.device,
+            &self.config,
+            &self.queue,
+            &self.char_list,
+            &self.font,
+        );
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
