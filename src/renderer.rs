@@ -1,6 +1,7 @@
 use std::{cell::RefCell, iter, rc::Rc};
 
 use guillotiere::{AtlasAllocator, Size};
+use hashbrown::HashSet;
 use wgpu::{util::DeviceExt, CommandEncoderDescriptor};
 use winit::{
     event::*,
@@ -33,6 +34,7 @@ pub struct Renderer {
     audio_engine: Option<Rc<RefCell<glicol::Engine<128>>>>,
     bpm: f32,
     cursors: Vec<usize>,
+    modifiers: HashSet<VirtualKeyCode>,
 }
 
 impl Renderer {
@@ -119,6 +121,7 @@ impl Renderer {
             audio_engine: None,
             bpm: 120.,
             cursors,
+            modifiers: HashSet::new(),
         }
     }
 
@@ -147,14 +150,71 @@ impl Renderer {
         if self.update_code(event, modifiers) {
             return true;
         }
-        if self.move_cursor(event) {
+
+        if self.detect_modifiers(event) {
+            return true;
+        } else if self.move_cursor(event) {
             self.update();
             return true;
-        } else if self.input_or_delete_character(event, modifiers) {
+        } else if self.input_or_delete_character(event) {
             self.update();
             return true;
         } else {
             return false;
+        }
+    }
+
+    pub fn detect_modifiers(&mut self, event: &WindowEvent) -> bool {
+        match event {
+            WindowEvent::KeyboardInput {
+                input:
+                    KeyboardInput {
+                        state: ElementState::Pressed,
+                        virtual_keycode: Some(keycode),
+                        ..
+                    },
+                ..
+            } => {
+                if keycode == &VirtualKeyCode::RAlt
+                    || keycode == &VirtualKeyCode::LAlt
+                    || keycode == &VirtualKeyCode::RControl
+                    || keycode == &VirtualKeyCode::LControl
+                    || keycode == &VirtualKeyCode::RShift
+                    || keycode == &VirtualKeyCode::LShift
+                    || keycode == &VirtualKeyCode::RWin
+                    || keycode == &VirtualKeyCode::LWin
+                {
+                    self.modifiers.insert(*keycode);
+                    true
+                } else {
+                    false
+                }
+            }
+            WindowEvent::KeyboardInput {
+                input:
+                    KeyboardInput {
+                        state: ElementState::Released,
+                        virtual_keycode: Some(keycode),
+                        ..
+                    },
+                ..
+            } => {
+                if keycode == &VirtualKeyCode::RAlt
+                    || keycode == &VirtualKeyCode::LAlt
+                    || keycode == &VirtualKeyCode::RControl
+                    || keycode == &VirtualKeyCode::LControl
+                    || keycode == &VirtualKeyCode::RShift
+                    || keycode == &VirtualKeyCode::LShift
+                    || keycode == &VirtualKeyCode::RWin
+                    || keycode == &VirtualKeyCode::LWin
+                {
+                    self.modifiers.remove(keycode);
+                    true
+                } else {
+                    false
+                }
+            }
+            _ => false,
         }
     }
 
@@ -321,7 +381,7 @@ impl Renderer {
     pub fn input_or_delete_character(
         &mut self,
         event: &WindowEvent,
-        modifiers: &ModifiersState,
+        // modifiers: &HashSet<VirtualKeyCode>,
     ) -> bool {
         if let WindowEvent::KeyboardInput {
             input:
@@ -347,7 +407,7 @@ impl Renderer {
             }
             true
         } else {
-            let c = crate::get_char_from_event(event, modifiers);
+            let c = crate::get_char_from_event(event, &self.modifiers);
             if let Some(c) = c {
                 tracing::warn!("add character: {:?}", c);
                 self.char_list.insert(self.cursors[0] as usize, c);

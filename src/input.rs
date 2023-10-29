@@ -1,6 +1,11 @@
+use hashbrown::HashSet;
+
 use winit::event::{ElementState, KeyboardInput, ModifiersState, VirtualKeyCode, WindowEvent};
 
-pub fn get_char_from_event(event: &WindowEvent, modifiers: &ModifiersState) -> Option<char> {
+pub fn get_char_from_event(
+    event: &WindowEvent,
+    modifiers: &HashSet<VirtualKeyCode>,
+) -> Option<char> {
     match event {
         WindowEvent::KeyboardInput {
             input:
@@ -12,11 +17,17 @@ pub fn get_char_from_event(event: &WindowEvent, modifiers: &ModifiersState) -> O
             ..
         } => {
             let is_pressed = *state == ElementState::Pressed;
+
             if !is_pressed {
                 return None;
             }
 
-            let is_shift = modifiers.shift();
+            log::warn!("keycode: {:?}", keycode);
+            log::warn!("modifiers {:?}", modifiers);
+
+            // let is_shift = modifiers.shift();
+            let is_shift = modifiers.contains(&VirtualKeyCode::LShift)
+                || modifiers.contains(&VirtualKeyCode::RShift);
             // let is_caps_lock = modifiers.caps_lock();
             let is_caps_lock = false;
             let is_upper = is_shift ^ is_caps_lock;

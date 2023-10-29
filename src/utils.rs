@@ -1,7 +1,6 @@
-use std::{cell::RefCell, char, rc::Rc};
-
 use fontdue::Font;
 use guillotiere::{AtlasAllocator, Size};
+use std::{cell::RefCell, char, rc::Rc};
 use wgpu::{util::DeviceExt, CommandEncoderDescriptor};
 
 use crate::Vertex;
