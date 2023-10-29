@@ -1,0 +1,6 @@
+// font rendered with web gpu
+// shift + enter to run/update the code
+
+o: sin 440 >> mul 0.1;
+
+b: sin  441 >> mul 0.1

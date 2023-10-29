@@ -133,19 +133,20 @@ pub async fn run() {
 
         request_animation_frame(g.borrow().as_ref().unwrap());
     }
-    let mut modifiers = ModifiersState::default();
+    // let mut modifiers = ModifiersState::default();
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent {
             ref event,
             window_id,
         } if window_id == renderer.window().borrow().id() => {
-            if !renderer.input(event, &modifiers) {
+            if !renderer.input(event) {
                 //modifiers
                 match event {
                     WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
-                    WindowEvent::ModifiersChanged(new_modifiers) => {
-                        modifiers = *new_modifiers;
-                    }
+                    // not working on web, so we manually manage modifiers
+                    // WindowEvent::ModifiersChanged(new_modifiers) => {
+                    //     modifiers = *new_modifiers;
+                    // }
                     WindowEvent::Resized(physical_size) => {
                         renderer.resize(*physical_size);
                     }

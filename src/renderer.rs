@@ -94,9 +94,7 @@ impl Renderer {
         let b = include_bytes!("FiraCode-Regular.ttf") as &[u8];
         let font = fontdue::Font::from_bytes(b, fontdue::FontSettings::default()).unwrap();
 
-        let char_list: Vec<char> = "o: sin 440 >> mul 0.1;\n\nb: sin  441 >> mul 0.1"
-            .chars()
-            .collect();
+        let char_list: Vec<char> = include_str!("./code.glicol").chars().collect();
         let cursors = vec![0];
         let (render_pipeline, vertex_buffer, index_buffer, num_indices, diffuse_bind_group) =
             crate::utils::update_renderer(
@@ -145,9 +143,9 @@ impl Renderer {
         }
     }
 
-    pub fn input(&mut self, event: &WindowEvent, modifiers: &ModifiersState) -> bool {
+    pub fn input(&mut self, event: &WindowEvent) -> bool {
         #[cfg(target_arch = "wasm32")]
-        if self.update_code(event, modifiers) {
+        if self.update_code(event) {
             return true;
         }
 
@@ -219,7 +217,7 @@ impl Renderer {
     }
 
     #[cfg(target_arch = "wasm32")]
-    fn update_code(&mut self, event: &WindowEvent, modifiers: &ModifiersState) -> bool {
+    fn update_code(&mut self, event: &WindowEvent) -> bool {
         // shift + enter to play the sound based on self.char_list
         match event {
             WindowEvent::KeyboardInput {
@@ -231,7 +229,10 @@ impl Renderer {
                     },
                 ..
             } => {
-                if keycode == &VirtualKeyCode::RAlt || keycode == &VirtualKeyCode::LAlt {
+                if keycode == &VirtualKeyCode::Return
+                    && (self.modifiers.contains(&VirtualKeyCode::LShift)
+                        || self.modifiers.contains(&VirtualKeyCode::RShift))
+                {
                     let code: String = self.char_list.iter().collect();
                     log::warn!("update code: {}", code);
                     if let Some(engine) = &self.audio_engine {
