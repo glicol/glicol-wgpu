@@ -30,16 +30,14 @@ var t_diffuse: texture_2d<f32>;
 @group(0)@binding(1)
 var s_diffuse: sampler;
 
-
-// @fragment
-// fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-//     // return vec4<f32>(1.0, 1.0, 1.0, 1.0);
-//     return textureSample(t_diffuse, s_diffuse, in.tex_coords);
-// }
-
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var color = textureSample(t_diffuse, s_diffuse, in.tex_coords);
     var grayscale = 1. * color.r + 1. * color.g + 1. * color.b;
-    return vec4<f32>(grayscale, grayscale, grayscale, color.a);
+    if (in.tex_coords.x == 0.0 || in.tex_coords.y == 0.0) {
+        return vec4<f32>(0.0, 0.3, 0.5, 0.9);
+    } else {
+        return vec4<f32>(grayscale, grayscale, grayscale, color.a);
+    }
+    
 }

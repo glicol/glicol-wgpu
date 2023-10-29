@@ -75,9 +75,9 @@ pub async fn run() {
         let mut engine_ref = Rc::new(RefCell::new(engine));
         let mut engine_ref2 = engine_ref.clone();
         renderer.add_audio_engine(engine_ref2);
-        engine_ref
-            .borrow_mut()
-            .update_with_code(r#"o: speed 16.0 >> seq 60 >> hh 0.03"#);
+        // engine_ref
+        //     .borrow_mut()
+        //     .update_with_code(r#"o: speed 16.0 >> seq 60 >> hh 0.03"#);
         let window = web_sys::window().expect("no global `window` exists");
         let this = JsValue::null();
         let start = window

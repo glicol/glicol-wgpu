@@ -95,9 +95,11 @@ impl Renderer {
         let char_list: Vec<char> = "o: sin 440 >> mul 0.1;\n\nb: sin  441 >> mul 0.1"
             .chars()
             .collect();
-
+        let cursors = vec![0];
         let (render_pipeline, vertex_buffer, index_buffer, num_indices, diffuse_bind_group) =
-            crate::utils::update_renderer(&window, &device, &config, &queue, &char_list, &font);
+            crate::utils::update_renderer(
+                &window, &device, &config, &queue, &char_list, &cursors, &font,
+            );
 
         Self {
             surface,
@@ -116,7 +118,7 @@ impl Renderer {
             font,
             audio_engine: None,
             bpm: 120.,
-            cursors: vec![0],
+            cursors,
         }
     }
 
@@ -159,47 +161,32 @@ impl Renderer {
     #[cfg(target_arch = "wasm32")]
     fn update_code(&mut self, event: &WindowEvent, modifiers: &ModifiersState) -> bool {
         // shift + enter to play the sound based on self.char_list
-        // log::warn!("try to play sound");
-        if let WindowEvent::KeyboardInput {
-            input:
-                KeyboardInput {
-                    state: ElementState::Pressed,
-                    virtual_keycode: Some(VirtualKeyCode::LAlt),
-                    ..
-                },
-            ..
-        } = event
-        {
-            // log::warn!("before shift");
-            // if modifiers.shift() {
-            log::warn!("play sound");
-            let code: String = self.char_list.iter().collect();
-            log::warn!("code: {}", code);
-            if let Some(engine) = &self.audio_engine {
-                let mut engine_borrow = engine.borrow_mut();
-                engine_borrow.update_with_code(&code);
-            }
-            return true;
-            // }
-        }
-        false
-    }
-
-    pub fn move_cursor(&mut self, event: &WindowEvent) -> bool {
         match event {
             WindowEvent::KeyboardInput {
                 input:
                     KeyboardInput {
-                        state,
+                        state: ElementState::Pressed,
                         virtual_keycode: Some(keycode),
                         ..
                     },
                 ..
             } => {
-                // tracing::warn!("{:?}, keycode:::\n\n\n {:?}", state, keycode);
+                if keycode == &VirtualKeyCode::RAlt || keycode == &VirtualKeyCode::LAlt {
+                    let code: String = self.char_list.iter().collect();
+                    log::warn!("update code: {}", code);
+                    if let Some(engine) = &self.audio_engine {
+                        let mut engine_borrow = engine.borrow_mut();
+                        engine_borrow.update_with_code(&code);
+                    }
+                    return true;
+                }
+                false
             }
-            _ => {}
-        };
+            _ => false,
+        }
+    }
+
+    pub fn move_cursor(&mut self, event: &WindowEvent) -> bool {
         if let WindowEvent::KeyboardInput {
             input:
                 KeyboardInput {
@@ -336,20 +323,6 @@ impl Renderer {
         event: &WindowEvent,
         modifiers: &ModifiersState,
     ) -> bool {
-        match event {
-            WindowEvent::KeyboardInput {
-                input:
-                    KeyboardInput {
-                        state,
-                        virtual_keycode: Some(keycode),
-                        ..
-                    },
-                ..
-            } => {
-                // tracing::warn!("{:?}, keycode:::\n\n\n {:?}", state, keycode);
-            }
-            _ => {}
-        };
         if let WindowEvent::KeyboardInput {
             input:
                 KeyboardInput {
@@ -386,56 +359,6 @@ impl Renderer {
         }
     }
 
-    fn request_position_change(&mut self, event: &WindowEvent) -> bool {
-        match event {
-            WindowEvent::KeyboardInput {
-                input:
-                    KeyboardInput {
-                        state,
-                        virtual_keycode: Some(keycode),
-                        ..
-                    },
-                ..
-            } => {
-                let is_pressed = *state == ElementState::Pressed;
-                match keycode {
-                    VirtualKeyCode::Left => {
-                        if is_pressed {
-                            self.position -= 0.01;
-                        }
-                        #[cfg(target_arch = "wasm32")]
-                        log::warn!("position: {}", self.position);
-                        if let Some(engine) = &self.audio_engine {
-                            let mut engine_borrow = engine.borrow_mut();
-                            self.bpm -= 10.;
-                            engine_borrow.set_bpm(self.bpm);
-                            // engine_borrow
-                            //     .update_with_code(r#"o: speed 4.0 >> seq _ 60 >> sn 0.05"#);
-                        }
-                        true
-                    }
-
-                    VirtualKeyCode::Right => {
-                        if is_pressed {
-                            self.position += 0.01;
-                        }
-                        #[cfg(target_arch = "wasm32")]
-                        log::warn!("position: {}", self.position);
-                        if let Some(engine) = &self.audio_engine {
-                            let mut engine_borrow = engine.borrow_mut();
-                            self.bpm += 10.;
-                            engine_borrow.set_bpm(self.bpm);
-                            // engine_borrow.update_with_code(r#"o: speed 4.0 >> seq 60 >> bd 0.03"#);
-                        }
-                        true
-                    }
-                    _ => false,
-                }
-            }
-            _ => false,
-        }
-    }
-
     pub fn update(&mut self) {
         // self.queue.write_buffer(
         //     &self.position_buffer,
@@ -454,6 +377,7 @@ impl Renderer {
             &self.config,
             &self.queue,
             &self.char_list,
+            &self.cursors,
             &self.font,
         );
     }
