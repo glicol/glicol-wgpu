@@ -285,8 +285,8 @@ pub fn update_renderer(
         let cursor_height = 32.0 / window.borrow().inner_size().height as f32 * 96. / 72.;
         let cursor_top_left_x = x;
         let cursor_top_left_y = y;
-        let cursor_bottom_right_x = x + cursor_width * 2.0;
-        let cursor_bottom_right_y = y + cursor_height * 2.0;
+        let cursor_bottom_right_x = x + 0.1;
+        let cursor_bottom_right_y = y + 0.2;
 
         vertices.extend_from_slice(&[
             Vertex {

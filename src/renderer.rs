@@ -1,12 +1,12 @@
 use std::{cell::RefCell, iter, rc::Rc};
 
-use guillotiere::{AtlasAllocator, Size};
+// use guillotiere::{AtlasAllocator, Size};
 use hashbrown::HashSet;
-use wgpu::{util::DeviceExt, CommandEncoderDescriptor};
+// use wgpu::{util::DeviceExt, CommandEncoderDescriptor};
 use winit::{
     event::*,
-    event_loop::{ControlFlow, EventLoop},
-    window::{Window, WindowBuilder},
+    // event_loop::{ControlFlow, EventLoop},
+    window::Window, //WindowBuilder
 };
 
 #[cfg(target_arch = "wasm32")]
@@ -23,7 +23,7 @@ pub struct Renderer {
     index_buffer: wgpu::Buffer,
     // position_buffer: wgpu::Buffer,
     num_indices: u32,
-    position: f32,
+    // position: f32,
     // #[allow(dead_code)]
     // diffuse_texture: texture::Texture,
     diffuse_bind_group: wgpu::BindGroup,
@@ -31,7 +31,9 @@ pub struct Renderer {
     window: Rc<RefCell<winit::window::Window>>,
     char_list: Vec<char>,
     font: fontdue::Font,
+    #[cfg(target_arch = "wasm32")]
     audio_engine: Option<Rc<RefCell<glicol::Engine<128>>>>,
+    #[cfg(target_arch = "wasm32")]
     bpm: f32,
     cursors: Vec<usize>,
     modifiers: HashSet<VirtualKeyCode>,
@@ -113,10 +115,12 @@ impl Renderer {
             num_indices,
             diffuse_bind_group,
             window,
-            position: 0.0,
+            // position: 0.0,
             char_list,
             font,
+            #[cfg(target_arch = "wasm32")]
             audio_engine: None,
+            #[cfg(target_arch = "wasm32")]
             bpm: 120.,
             cursors,
             modifiers: HashSet::new(),
