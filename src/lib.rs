@@ -70,68 +70,68 @@ pub async fn run() {
 
     #[cfg(target_arch = "wasm32")]
     {
-        use glicol::Engine;
-        let mut engine = Engine::<128>::new();
-        let mut engine_ref = Rc::new(RefCell::new(engine));
-        let mut engine_ref2 = engine_ref.clone();
-        renderer.add_audio_engine(engine_ref2);
-        // engine_ref
-        //     .borrow_mut()
-        //     .update_with_code(r#"o: speed 16.0 >> seq 60 >> hh 0.03"#);
-        let window = web_sys::window().expect("no global `window` exists");
-        let this = JsValue::null();
-        let start = window
-            .get("audioStart")
-            .unwrap()
-            .dyn_into::<Function>()
-            .unwrap();
-        start.call0(&this).unwrap();
-        let sab = window
-            .get("dataSAB")
-            .unwrap()
-            .dyn_into::<js_sys::SharedArrayBuffer>()
-            .unwrap();
-        let buf = Float32Array::new(&sab);
-        let write_ptr = JsValue::from(
-            window
-                .get("writePtr")
-                .unwrap()
-                .dyn_into::<js_sys::Uint32Array>()
-                .unwrap(),
-        );
-        let read_ptr = JsValue::from(
-            window
-                .get("readPtr")
-                .unwrap()
-                .dyn_into::<js_sys::Uint32Array>()
-                .unwrap(),
-        );
+        //     use glicol::Engine;
+        //     let mut engine = Engine::<128>::new();
+        //     let mut engine_ref = Rc::new(RefCell::new(engine));
+        //     let mut engine_ref2 = engine_ref.clone();
+        //     renderer.add_audio_engine(engine_ref2);
+        //     // engine_ref
+        //     //     .borrow_mut()
+        //     //     .update_with_code(r#"o: speed 16.0 >> seq 60 >> hh 0.03"#);
+        //     let window = web_sys::window().expect("no global `window` exists");
+        //     let this = JsValue::null();
+        //     let start = window
+        //         .get("audioStart")
+        //         .unwrap()
+        //         .dyn_into::<Function>()
+        //         .unwrap();
+        //     start.call0(&this).unwrap();
+        //     let sab = window
+        //         .get("dataSAB")
+        //         .unwrap()
+        //         .dyn_into::<js_sys::SharedArrayBuffer>()
+        //         .unwrap();
+        //     let buf = Float32Array::new(&sab);
+        //     let write_ptr = JsValue::from(
+        //         window
+        //             .get("writePtr")
+        //             .unwrap()
+        //             .dyn_into::<js_sys::Uint32Array>()
+        //             .unwrap(),
+        //     );
+        //     let read_ptr = JsValue::from(
+        //         window
+        //             .get("readPtr")
+        //             .unwrap()
+        //             .dyn_into::<js_sys::Uint32Array>()
+        //             .unwrap(),
+        //     );
 
-        let f = Rc::new(RefCell::new(None));
-        let g = f.clone();
-        *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
-            loop {
-                let wr = js_sys::Atomics::load(&write_ptr, 0).unwrap();
-                let rd = js_sys::Atomics::load(&read_ptr, 0).unwrap();
-                let available_read = (wr + 2048 - rd) % 2048;
-                let available_write = 2048 - available_read;
-                if available_write <= 128 {
-                    break;
-                }
-                let mut engine_borrow = engine_ref.borrow_mut();
-                let (block, _console_info) = engine_borrow.next_block(vec![]);
+        //     let f = Rc::new(RefCell::new(None));
+        //     let g = f.clone();
+        //     *g.borrow_mut() = Some(Closure::wrap(Box::new(move || {
+        //         loop {
+        //             let wr = js_sys::Atomics::load(&write_ptr, 0).unwrap();
+        //             let rd = js_sys::Atomics::load(&read_ptr, 0).unwrap();
+        //             let available_read = (wr + 2048 - rd) % 2048;
+        //             let available_write = 2048 - available_read;
+        //             if available_write <= 128 {
+        //                 break;
+        //             }
+        //             let mut engine_borrow = engine_ref.borrow_mut();
+        //             let (block, _console_info) = engine_borrow.next_block(vec![]);
 
-                for i in 0..128 {
-                    let wr = js_sys::Atomics::load(&write_ptr, 0).unwrap();
-                    let val = block[0][i];
-                    buf.set_index(wr as u32, val);
-                    js_sys::Atomics::store(&write_ptr, 0, (wr + 1) % (2048)).unwrap();
-                }
-            }
-            request_animation_frame(f.borrow().as_ref().unwrap());
-        }) as Box<dyn FnMut()>));
+        //             for i in 0..128 {
+        //                 let wr = js_sys::Atomics::load(&write_ptr, 0).unwrap();
+        //                 let val = block[0][i];
+        //                 buf.set_index(wr as u32, val);
+        //                 js_sys::Atomics::store(&write_ptr, 0, (wr + 1) % (2048)).unwrap();
+        //             }
+        //         }
+        //         request_animation_frame(f.borrow().as_ref().unwrap());
+        //     }) as Box<dyn FnMut()>));
 
-        request_animation_frame(g.borrow().as_ref().unwrap());
+        //     request_animation_frame(g.borrow().as_ref().unwrap());
     }
     // let mut modifiers = ModifiersState::default();
     event_loop.run(move |event, _, control_flow| match event {
@@ -184,32 +184,10 @@ fn resize_window(window: &Rc<RefCell<winit::window::Window>>) {
         .set_inner_size(PhysicalSize::new(width, height));
 }
 
-#[cfg(target_arch = "wasm32")]
-fn request_animation_frame(f: &Closure<dyn FnMut()>) {
-    web_sys::window()
-        .expect("REASON")
-        .request_animation_frame(f.as_ref().unchecked_ref())
-        .expect("should register `requestAnimationFrame` OK");
-}
-
-#[cfg(target_arch = "wasm32")]
-struct SineWave {
-    phase: f32,
-    freq: f32,
-}
-
-#[cfg(target_arch = "wasm32")]
-impl SineWave {
-    fn new(freq: f32) -> Self {
-        Self { phase: 0.0, freq }
-    }
-
-    fn next_sample(&mut self) -> Option<[f32; 2]> {
-        let val = (self.phase * 2.0 * std::f32::consts::PI).sin();
-        self.phase += self.freq / 44100.0;
-        if self.phase > 1.0 {
-            self.phase -= 1.0;
-        }
-        Some([val, val])
-    }
-}
+// #[cfg(target_arch = "wasm32")]
+// fn request_animation_frame(f: &Closure<dyn FnMut()>) {
+//     web_sys::window()
+//         .expect("REASON")
+//         .request_animation_frame(f.as_ref().unchecked_ref())
+//         .expect("should register `requestAnimationFrame` OK");
+// }
