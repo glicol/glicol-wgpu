@@ -262,11 +262,11 @@ impl Renderer {
             ..
         } = event
         {
-            tracing::warn!("move cursor left");
+            // tracing::warn!("move cursor left");
             if self.cursors[0] > 0 {
                 self.cursors[0] -= 1;
             }
-            tracing::warn!("cursors: {:?}", self.cursors);
+            // tracing::warn!("cursors: {:?}", self.cursors);
             true
         } else if let WindowEvent::KeyboardInput {
             input:
@@ -278,11 +278,11 @@ impl Renderer {
             ..
         } = event
         {
-            tracing::warn!("move cursor right");
+            // tracing::warn!("move cursor right");
             if self.cursors[0] < self.char_list.len() {
                 self.cursors[0] += 1;
             }
-            tracing::warn!("cursors: {:?}", self.cursors);
+            // tracing::warn!("cursors: {:?}", self.cursors);
             true
         } else if let WindowEvent::KeyboardInput {
             input:
@@ -294,7 +294,7 @@ impl Renderer {
             ..
         } = event
         {
-            tracing::warn!("move cursor up");
+            // tracing::warn!("move cursor up");
             let mut pos = self.cursors[0] as usize;
 
             // Find the start of the current line
@@ -344,7 +344,7 @@ impl Renderer {
             ..
         } = event
         {
-            tracing::warn!("move cursor down");
+            // tracing::warn!("move cursor down");
             let mut pos = self.cursors[0] as usize;
 
             // Find the start of the current line

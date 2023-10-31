@@ -21,7 +21,7 @@ pub fn update_renderer(
     wgpu::BindGroup,
 ) {
     let mut allocator = AtlasAllocator::new(Size::new(2048, 2048));
-    let font_size = 32.0 * window.borrow().scale_factor() as f32 * 96. / 72.;
+    let font_size = 32.0 * window.borrow().scale_factor() as f32;
     let padding = 10; // (10. * window.borrow().scale_factor()) as i32;
     allocator.clear();
     let texture = device.create_texture(&wgpu::TextureDescriptor {
@@ -43,7 +43,7 @@ pub fn update_renderer(
     let mut indices = Vec::new();
 
     let mut line_shift = 0.0; // shift caused by \n character
-    let mut x_offset = 32.0 / window.borrow().inner_size().width as f32 * 96. / 72.;
+    let mut x_offset = 32.0 / window.borrow().inner_size().width as f32;
     let mut bypass_count = 0; // \n is not rendered, so we need to skip it
     let mut cursor_positions = vec![];
     for (i, ch) in char_list.iter().enumerate() {
@@ -51,9 +51,9 @@ pub fn update_renderer(
 
         if *ch == '\n' {
             let (metrics, _bitmap) = font.rasterize(*ch, font_size);
-            line_shift +=
-                metrics.height as f32 / window.borrow().inner_size().height as f32 * 96. / 72.;
-            x_offset = 32.0 / window.borrow().inner_size().width as f32 * 96. / 72.;
+            line_shift += metrics.height as f32 / window.borrow().inner_size().height as f32
+                * window.borrow().scale_factor() as f32;
+            x_offset = 32.0 / window.borrow().inner_size().width as f32;
             bypass_count += 1; // skip the newline character
             if i + bypass_count - 1 < char_list.len()
                 && (char_list[i + bypass_count - 1] == '\n')
@@ -61,8 +61,7 @@ pub fn update_renderer(
             {
                 cursor_positions.push((
                     x_offset,
-                    metrics.ymin as f32 / window.borrow().inner_size().height as f32 * 96. / 72.
-                        - line_shift,
+                    -line_shift, // metrics.ymin as f32 / window.borrow().inner_size().height as f32
                 ));
             }
             // edge case
@@ -70,8 +69,7 @@ pub fn update_renderer(
                 if cursors.contains(&0) && char_list[0] == '\n' {
                     cursor_positions.push((
                         x_offset,
-                        metrics.ymin as f32 / window.borrow().inner_size().height as f32 * 96.
-                            / 72.,
+                        0.0, // metrics.ymin as f32 / window.borrow().inner_size().height as f32,
                     ));
                 }
             }
@@ -84,28 +82,21 @@ pub fn update_renderer(
             let top_left_y = 0.0;
             let bottom_right_x = 0.0;
             let bottom_right_y = 0.0;
-            let char_width =
-                metrics.width as f32 / window.borrow().inner_size().width as f32 * 96. / 72.;
-            let char_height =
-                metrics.height as f32 / window.borrow().inner_size().height as f32 * 96. / 72.;
-            let y_offset =
-                metrics.ymin as f32 / window.borrow().inner_size().height as f32 * 96. / 72.;
-            let font_size_scale = 32.0 / window.borrow().inner_size().height as f32 * 96. / 72.;
+            let char_width = metrics.width as f32 / window.borrow().inner_size().width as f32;
+            let char_height = metrics.height as f32 / window.borrow().inner_size().height as f32;
+            let y_offset = metrics.ymin as f32 / window.borrow().inner_size().height as f32;
+            let font_size_scale = font_size / window.borrow().inner_size().height as f32;
             if cursors.contains(&(i + bypass_count)) {
                 cursor_positions.push((
                     x_offset,
-                    metrics.ymin as f32 / window.borrow().inner_size().height as f32 * 96. / 72.
-                        - line_shift,
+                    -line_shift, // metrics.ymin as f32 / window.borrow().inner_size().height as f32
                 ));
             }
             // edge case: cursor is in the end of the line
             if cursors.contains(&(i + 1 + bypass_count)) {
                 cursor_positions.push((
-                    x_offset
-                        + metrics.advance_width / window.borrow().inner_size().width as f32 * 96.
-                            / 72.,
-                    metrics.ymin as f32 / window.borrow().inner_size().height as f32 * 96. / 72.
-                        - line_shift,
+                    x_offset + metrics.advance_width / window.borrow().inner_size().width as f32,
+                    -line_shift, // metrics.ymin as f32 / window.borrow().inner_size().height as f32
                 ));
             }
             vertices.extend_from_slice(&[
@@ -138,8 +129,7 @@ pub fn update_renderer(
                     tex_coords: [bottom_right_x, top_left_y],
                 },
             ]);
-            x_offset +=
-                metrics.advance_width / window.borrow().inner_size().width as f32 * 96. / 72.;
+            x_offset += metrics.advance_width / window.borrow().inner_size().width as f32;
             indices.extend_from_slice(&[
                 0 + i as u16 * 4,
                 1 + i as u16 * 4,
@@ -166,19 +156,15 @@ pub fn update_renderer(
             if cursors.contains(&(i + bypass_count)) {
                 cursor_positions.push((
                     x_offset,
-                    metrics.ymin as f32 / window.borrow().inner_size().height as f32 * 96. / 72.
-                        - line_shift,
+                    -line_shift, // metrics.ymin as f32 / window.borrow().inner_size().height as f32
                 ));
             }
 
             // edge case: cursor is in the end of the line
             if cursors.contains(&(i + 1 + bypass_count)) {
                 cursor_positions.push((
-                    x_offset
-                        + metrics.advance_width / window.borrow().inner_size().width as f32 * 96.
-                            / 72.,
-                    metrics.ymin as f32 / window.borrow().inner_size().height as f32 * 96. / 72.
-                        - line_shift,
+                    x_offset + metrics.advance_width / window.borrow().inner_size().width as f32,
+                    -line_shift, //  metrics.ymin as f32 / window.borrow().inner_size().height as f32
                 ));
             }
 
@@ -266,47 +252,67 @@ pub fn update_renderer(
     let char_len = indices.len() / 6;
     // after all characters have been processed, update the cursor positions
     for (i, (x, y)) in cursor_positions.iter().enumerate() {
+        // log::warn!("cursor position: {}, {}", x, y);
         // Get metrics for a capital letter to approximate ascent
-        let capital_metrics = font.rasterize('H', 32.0).0;
-        let ascent_approx =
-            capital_metrics.height as f32 / window.borrow().inner_size().height as f32 * 96. / 72.;
+        let capital_metrics = font.rasterize('H', font_size).0;
+        // let ascent_approx =
+        //     capital_metrics.height as f32 / window.borrow().inner_size().height as f32;
 
         // Get metrics for a character with a descender to approximate descent
-        let descender_metrics = font.rasterize('g', 32.0).0;
-        let descent_approx =
-            descender_metrics.height as f32 / window.borrow().inner_size().height as f32 * 96.
-                / 72.
-                - ascent_approx;
-        let baseline = ascent_approx - descent_approx;
-
+        let descender_metrics = font.rasterize('g', font_size).0;
+        // let descent_approx = descender_metrics.height as f32
+        //     / window.borrow().inner_size().height as f32
+        //     - ascent_approx;
+        // let baseline = ascent_approx - descent_approx;
+        // log::warn!(
+        //     "ascent_approx: {}, descent_approx: {}, baseline: {}",
+        //     ascent_approx,
+        //     descent_approx,
+        //     baseline
+        // );
         let x = *x - 1.0;
-        let y = 1.0 + y - baseline * 2.0;
-        let cursor_width = 16.0 / window.borrow().inner_size().width as f32 * 96. / 72.;
-        let cursor_height = 32.0 / window.borrow().inner_size().height as f32 * 96. / 72.;
+        let y = 1.0 + y;
+        let y = y
+            - (capital_metrics.height as f32
+                + descender_metrics.height as f32
+                + capital_metrics.ymin as f32
+                + descender_metrics.ymin as f32)
+                / window.borrow().inner_size().height as f32;
+        let cursor_width = capital_metrics.width as f32 / window.borrow().inner_size().width as f32;
+        let cursor_height = 16.0 / window.borrow().inner_size().height as f32;
+
         let cursor_top_left_x = x;
         let cursor_top_left_y = y;
-        let cursor_bottom_right_x = x + 0.1;
-        let cursor_bottom_right_y = y + 0.2;
+        let cursor_bottom_right_x = x + cursor_width;
+        let cursor_bottom_right_y = y - cursor_height;
 
+        // log::warn!(
+        //     "cursor_top_left_x: {}, cursor_top_left_y: {}, cursor_bottom_right_x: {}, cursor_bottom_right_y: {}",
+        //     cursor_top_left_x,
+        //     cursor_top_left_y,
+        //     cursor_bottom_right_x,
+        //     cursor_bottom_right_y
+        // );
+
+        let i = i + char_len;
         vertices.extend_from_slice(&[
-            Vertex {
-                position: [cursor_top_left_x, cursor_bottom_right_y, 0.0],
-                tex_coords: [0.0, 0.0],
-            },
             Vertex {
                 position: [cursor_top_left_x, cursor_top_left_y, 0.0],
                 tex_coords: [0.0, 0.0],
             },
             Vertex {
-                position: [cursor_bottom_right_x, cursor_top_left_y, 0.0],
+                position: [cursor_top_left_x, cursor_bottom_right_y, 0.0],
                 tex_coords: [0.0, 0.0],
             },
             Vertex {
                 position: [cursor_bottom_right_x, cursor_bottom_right_y, 0.0],
                 tex_coords: [0.0, 0.0],
             },
+            Vertex {
+                position: [cursor_bottom_right_x, cursor_top_left_y, 0.0],
+                tex_coords: [0.0, 0.0],
+            },
         ]);
-        let i = i + char_len;
         indices.extend_from_slice(&[
             0 + i as u16 * 4,
             1 + i as u16 * 4,
