@@ -239,10 +239,22 @@ impl Renderer {
                 {
                     let code: String = self.char_list.iter().collect();
                     log::warn!("update code: {}", code);
-                    if let Some(engine) = &self.audio_engine {
-                        let mut engine_borrow = engine.borrow_mut();
-                        engine_borrow.update_with_code(&code);
-                    }
+
+                    // use the ringbuf to push
+                    // if let Some(engine) = &self.audio_engine {
+                    //     let mut engine_borrow = engine.borrow_mut();
+                    //     engine_borrow.update_with_code(&code);
+                    // }
+
+                    // call the window.run from glicol.js
+                    let window = web_sys::window().expect("no global `window` exists");
+                    let run = window
+                        .get("run")
+                        .unwrap()
+                        .dyn_into::<js_sys::Function>()
+                        .unwrap();
+                    let this = JsValue::null();
+                    run.call1(&this, &code.into()).unwrap();
                     return true;
                 }
                 false

@@ -35,15 +35,16 @@
             console.log("WASM Loaded");
         });
     </script>
+    <script src="https://cdn.jsdelivr.net/gh/chaosprint/glicol@latest/js/src/glicol.js"></script>
     <script>
         // when users click the canvas,
         // we resume the audio ctx
-        document.getElementById("canvas-div").addEventListener("click", () => {
-            const ctx = window.ctx;
-            if (ctx.state === "suspended") {
-                ctx.resume();
-            }
-        });
+        // document.getElementById("canvas-div").addEventListener("click", () => {
+        //     const ctx = window.ctx;
+        //     if (ctx.state === "suspended") {
+        //         ctx.resume();
+        //     }
+        // });
     </script>
 </body>
 

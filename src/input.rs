@@ -346,6 +346,7 @@ pub fn get_char_from_event(
                         '='
                     }
                 }
+
                 VirtualKeyCode::Semicolon => {
                     if is_shift {
                         ':'
@@ -367,6 +368,7 @@ pub fn get_char_from_event(
                         ']'
                     }
                 }
+
                 VirtualKeyCode::Space => ' ',
                 VirtualKeyCode::Return => '\n',
                 _ => return None,
