@@ -1,6 +1,6 @@
 use hashbrown::HashSet;
 
-use winit::event::{ElementState, KeyboardInput, ModifiersState, VirtualKeyCode, WindowEvent};
+use winit::event::{ElementState, KeyboardInput, VirtualKeyCode, WindowEvent};
 
 pub fn get_char_from_event(
     event: &WindowEvent,

@@ -1,4 +1,4 @@
-use glicol_editor::*;
+use glicol_wgpu::*;
 use tracing_subscriber::EnvFilter;
 
 fn main() {

@@ -133,6 +133,7 @@ pub async fn run() {
 
         //     request_animation_frame(g.borrow().as_ref().unwrap());
     }
+    // #[cfg(not(target_arch = "wasm32"))]
     // let mut modifiers = ModifiersState::default();
     event_loop.run(move |event, _, control_flow| match event {
         Event::WindowEvent {
@@ -144,6 +145,7 @@ pub async fn run() {
                 match event {
                     WindowEvent::CloseRequested => *control_flow = ControlFlow::Exit,
                     // not working on web, so we manually manage modifiers
+                    // #[cfg(not(target_arch = "wasm32"))]
                     // WindowEvent::ModifiersChanged(new_modifiers) => {
                     //     modifiers = *new_modifiers;
                     // }

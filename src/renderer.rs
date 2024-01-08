@@ -148,7 +148,7 @@ impl Renderer {
     }
 
     pub fn input(&mut self, event: &WindowEvent) -> bool {
-        #[cfg(target_arch = "wasm32")]
+        // #[cfg(target_arch = "wasm32")]
         if self.update_code(event) {
             return true;
         }
@@ -215,6 +215,34 @@ impl Renderer {
                 } else {
                     false
                 }
+            }
+            _ => false,
+        }
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn update_code(&mut self, event: &WindowEvent) -> bool {
+        // shift + enter to play the sound based on self.char_list
+        match event {
+            WindowEvent::KeyboardInput {
+                input:
+                    KeyboardInput {
+                        state: ElementState::Pressed,
+                        virtual_keycode: Some(keycode),
+                        ..
+                    },
+                ..
+            } => {
+                if keycode == &VirtualKeyCode::Return
+                    && (self.modifiers.contains(&VirtualKeyCode::LShift)
+                        || self.modifiers.contains(&VirtualKeyCode::RShift))
+                {
+                    let code: String = self.char_list.iter().collect();
+                    log::warn!("update code: {}", code);
+
+                    return true;
+                }
+                false
             }
             _ => false,
         }

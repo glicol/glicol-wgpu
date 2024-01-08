@@ -1,3 +1,3 @@
 wasm-pack build --target web --release
-cp pkg/glicol_editor_bg.wasm ./
-cp pkg/glicol_editor.js ./
+cp pkg/glicol_wgpu_bg.wasm ./
+cp pkg/glicol_wgpu.js ./
