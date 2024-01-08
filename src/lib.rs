@@ -16,16 +16,14 @@ pub use utils::*;
 
 mod renderer;
 pub use renderer::*;
-// mod font;
-// pub use font::*;
 
 mod input;
 use input::*;
 
-// #[cfg(not(target_arch = "wasm32"))]
-// mod audio;
-// #[cfg(not(target_arch = "wasm32"))]
-// pub use audio::*;
+#[cfg(not(target_arch = "wasm32"))]
+mod audio;
+#[cfg(not(target_arch = "wasm32"))]
+pub use audio::*;
 
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;

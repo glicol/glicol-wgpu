@@ -1,18 +1,14 @@
 // font rendered with web gpu
 // shift + enter to run/update the code
 
-~t1: speed 8.0 >> seq ~a >> mul ~mod
->> mul 1.5 >> sp \guitar
->> lpf 1000.0 1.0 >> mul 0.4
+~t1: speed 4.0 >> seq 60 >> bd 0.2 >> mul 0.6
+    
+~t2: seq 33_33_ _33 33__33 _33
+>> mul 1.0
+>> sawsynth 0.01 0.1
+>> mul 0.5 >> lpf 1000.0 1.0
 
-~mod: squ 0.25 >> mul 0.5 >> add ~more
-~more: squ 1.5 >> mul 0.25 >> add 0.75
+// ~t3: speed 4.0 >> seq 60 61 61 63
+// >> hh 0.02 >> mul 0.4
 
-~a: choose 60 60 67 72 72 64 64 71 71
-
-~drumbd: seq 60 60 60 60 >> sp \808bd
-~drumhh: speed 4.0 >> seq _ ~x >> mul 1.0 >> sp \closedhh
-
-~x: choose 72 67 67 69
-
-out: mix ~t.. ~drum.. >> plate 0.1
+out: mix ~t.. >> mul 1 >> plate 0.1

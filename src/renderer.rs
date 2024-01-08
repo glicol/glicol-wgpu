@@ -12,6 +12,10 @@ use winit::{
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+use crate::audio::run_audio;
+#[cfg(not(target_arch = "wasm32"))]
+use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+
 pub struct Renderer {
     surface: wgpu::Surface,
     device: wgpu::Device,
@@ -31,12 +35,14 @@ pub struct Renderer {
     window: Rc<RefCell<winit::window::Window>>,
     char_list: Vec<char>,
     font: fontdue::Font,
-    #[cfg(target_arch = "wasm32")]
-    audio_engine: Option<Rc<RefCell<glicol::Engine<128>>>>,
-    #[cfg(target_arch = "wasm32")]
-    bpm: f32,
+    // #[cfg(target_arch = "wasm32")]
+    // audio_engine: Option<Rc<RefCell<glicol::Engine<128>>>>,
+    // #[cfg(target_arch = "wasm32")]
+    // bpm: f32,
     cursors: Vec<usize>,
     modifiers: HashSet<VirtualKeyCode>,
+    shared_string: std::sync::Arc<std::sync::Mutex<String>>,
+    has_update: std::sync::Arc<std::sync::atomic::AtomicBool>,
 }
 
 impl Renderer {
@@ -103,6 +109,68 @@ impl Renderer {
                 &window, &device, &config, &queue, &char_list, &cursors, &font,
             );
 
+        let host = cpal::default_host();
+        let audio_device = host.default_output_device().unwrap();
+        let audio_config = audio_device.default_output_config().unwrap();
+
+        let code = String::from("");
+        let shared_string = std::sync::Arc::new(std::sync::Mutex::new(code));
+        let shared_string_clone = shared_string.clone();
+        let has_update = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+        let has_update_clone = has_update.clone();
+
+        let audio_thread = std::thread::spawn(move || {
+            // let options = (
+            //     ptr_rb_left_clone,
+            //     ptr_rb_right_clone,
+            //     index_clone,
+            //     samples_l_ptr_clone,
+            //     samples_r_ptr_clone,
+            //     samples_index_clone,
+            //     path,
+            //     bpm,
+            //     capacity_clone,
+            // );
+            let options = (shared_string_clone, has_update_clone);
+            match audio_config.sample_format() {
+                cpal::SampleFormat::I8 => {
+                    run_audio::<i8>(&audio_device, &audio_config.into(), options)
+                }
+                cpal::SampleFormat::I16 => {
+                    run_audio::<i16>(&audio_device, &audio_config.into(), options)
+                }
+                // cpal::SampleFormat::I24 => run::<I24>(&device, &config.into()),
+                cpal::SampleFormat::I32 => {
+                    run_audio::<i32>(&audio_device, &audio_config.into(), options)
+                }
+                // cpal::SampleFormat::I48 => run::<I48>(&device, &config.into()),
+                cpal::SampleFormat::I64 => {
+                    run_audio::<i64>(&audio_device, &audio_config.into(), options)
+                }
+                cpal::SampleFormat::U8 => {
+                    run_audio::<u8>(&audio_device, &audio_config.into(), options)
+                }
+                cpal::SampleFormat::U16 => {
+                    run_audio::<u16>(&audio_device, &audio_config.into(), options)
+                }
+                // cpal::SampleFormat::U24 => run::<U24>(&device, &config.into()),
+                cpal::SampleFormat::U32 => {
+                    run_audio::<u32>(&audio_device, &audio_config.into(), options)
+                }
+                // cpal::SampleFormat::U48 => run::<U48>(&device, &config.into()),
+                cpal::SampleFormat::U64 => {
+                    run_audio::<u64>(&audio_device, &audio_config.into(), options)
+                }
+                cpal::SampleFormat::F32 => {
+                    run_audio::<f32>(&audio_device, &audio_config.into(), options)
+                }
+                cpal::SampleFormat::F64 => {
+                    run_audio::<f64>(&audio_device, &audio_config.into(), options)
+                }
+                sample_format => panic!("Unsupported sample format '{sample_format}'"),
+            }
+        });
+
         Self {
             surface,
             device,
@@ -118,12 +186,14 @@ impl Renderer {
             // position: 0.0,
             char_list,
             font,
-            #[cfg(target_arch = "wasm32")]
-            audio_engine: None,
-            #[cfg(target_arch = "wasm32")]
-            bpm: 120.,
+            // #[cfg(target_arch = "wasm32")]
+            // audio_engine: None,
+            // #[cfg(target_arch = "wasm32")]
+            // bpm: 120.,
             cursors,
             modifiers: HashSet::new(),
+            shared_string,
+            has_update,
         }
     }
 
@@ -239,7 +309,12 @@ impl Renderer {
                 {
                     let code: String = self.char_list.iter().collect();
                     log::warn!("update code: {}", code);
-
+                    {
+                        let mut shared_string_lock = self.shared_string.lock().unwrap();
+                        *shared_string_lock = code;
+                    }
+                    self.has_update
+                        .store(true, std::sync::atomic::Ordering::Release);
                     return true;
                 }
                 false
