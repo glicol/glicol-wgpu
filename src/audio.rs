@@ -1,11 +1,13 @@
 use anyhow::Result;
-use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicU32, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicPtr, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
+#[allow(unused_imports)]
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
+#[allow(unused_imports)]
 use cpal::{FromSample, Sample, SizedSample};
 
-const RB_SIZE: usize = 200;
+// const RB_SIZE: usize = 200;
 const BLOCK_SIZE: usize = 128;
 
 pub fn run_audio<T>(
@@ -36,7 +38,7 @@ where
     // let code_ptr = Arc::new(AtomicPtr::<u8>::new(ptr));
     // let code_len = Arc::new(AtomicUsize::new(code.len()));
     // let has_update = Arc::new(AtomicBool::new(true));
-    let code = Arc::clone(&options.0);
+    // let code = Arc::clone(&options.0);
     let code_clone = Arc::clone(&options.0);
     let has_update = Arc::clone(&options.1);
 
@@ -130,14 +132,14 @@ where
     Ok(())
 }
 
-fn write_data<T>(output: &mut [T], channels: usize, next_sample: &mut dyn FnMut() -> f32)
-where
-    T: Sample + FromSample<f32>,
-{
-    for frame in output.chunks_mut(channels) {
-        let value: T = T::from_sample(next_sample());
-        for sample in frame.iter_mut() {
-            *sample = value;
-        }
-    }
-}
+// fn write_data<T>(output: &mut [T], channels: usize, next_sample: &mut dyn FnMut() -> f32)
+// where
+//     T: Sample + FromSample<f32>,
+// {
+//     for frame in output.chunks_mut(channels) {
+//         let value: T = T::from_sample(next_sample());
+//         for sample in frame.iter_mut() {
+//             *sample = value;
+//         }
+//     }
+// }

@@ -14,6 +14,7 @@ use wasm_bindgen::prelude::*;
 
 use crate::audio::run_audio;
 #[cfg(not(target_arch = "wasm32"))]
+#[allow(unused_imports)]
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 
 pub struct Renderer {
@@ -119,7 +120,7 @@ impl Renderer {
         let has_update = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         let has_update_clone = has_update.clone();
 
-        let audio_thread = std::thread::spawn(move || {
+        let _audio_thread = std::thread::spawn(move || {
             // let options = (
             //     ptr_rb_left_clone,
             //     ptr_rb_right_clone,
