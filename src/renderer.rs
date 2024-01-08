@@ -12,7 +12,9 @@ use winit::{
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crate::audio::run_audio;
+
 #[cfg(not(target_arch = "wasm32"))]
 #[allow(unused_imports)]
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
@@ -42,7 +44,9 @@ pub struct Renderer {
     // bpm: f32,
     cursors: Vec<usize>,
     modifiers: HashSet<VirtualKeyCode>,
+    #[cfg(not(target_arch = "wasm32"))]
     shared_string: std::sync::Arc<std::sync::Mutex<String>>,
+    #[cfg(not(target_arch = "wasm32"))]
     has_update: std::sync::Arc<std::sync::atomic::AtomicBool>,
 }
 
@@ -110,67 +114,70 @@ impl Renderer {
                 &window, &device, &config, &queue, &char_list, &cursors, &font,
             );
 
-        let host = cpal::default_host();
-        let audio_device = host.default_output_device().unwrap();
-        let audio_config = audio_device.default_output_config().unwrap();
-
         let code = String::from("");
         let shared_string = std::sync::Arc::new(std::sync::Mutex::new(code));
         let shared_string_clone = shared_string.clone();
         let has_update = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
         let has_update_clone = has_update.clone();
 
-        let _audio_thread = std::thread::spawn(move || {
-            // let options = (
-            //     ptr_rb_left_clone,
-            //     ptr_rb_right_clone,
-            //     index_clone,
-            //     samples_l_ptr_clone,
-            //     samples_r_ptr_clone,
-            //     samples_index_clone,
-            //     path,
-            //     bpm,
-            //     capacity_clone,
-            // );
-            let options = (shared_string_clone, has_update_clone);
-            match audio_config.sample_format() {
-                cpal::SampleFormat::I8 => {
-                    run_audio::<i8>(&audio_device, &audio_config.into(), options)
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            let host = cpal::default_host();
+            let audio_device = host.default_output_device().unwrap();
+            let audio_config = audio_device.default_output_config().unwrap();
+
+            let _audio_thread = std::thread::spawn(move || {
+                // let options = (
+                //     ptr_rb_left_clone,
+                //     ptr_rb_right_clone,
+                //     index_clone,
+                //     samples_l_ptr_clone,
+                //     samples_r_ptr_clone,
+                //     samples_index_clone,
+                //     path,
+                //     bpm,
+                //     capacity_clone,
+                // );
+                let options = (shared_string_clone, has_update_clone);
+                match audio_config.sample_format() {
+                    cpal::SampleFormat::I8 => {
+                        run_audio::<i8>(&audio_device, &audio_config.into(), options)
+                    }
+                    cpal::SampleFormat::I16 => {
+                        run_audio::<i16>(&audio_device, &audio_config.into(), options)
+                    }
+                    // cpal::SampleFormat::I24 => run::<I24>(&device, &config.into()),
+                    cpal::SampleFormat::I32 => {
+                        run_audio::<i32>(&audio_device, &audio_config.into(), options)
+                    }
+                    // cpal::SampleFormat::I48 => run::<I48>(&device, &config.into()),
+                    cpal::SampleFormat::I64 => {
+                        run_audio::<i64>(&audio_device, &audio_config.into(), options)
+                    }
+                    cpal::SampleFormat::U8 => {
+                        run_audio::<u8>(&audio_device, &audio_config.into(), options)
+                    }
+                    cpal::SampleFormat::U16 => {
+                        run_audio::<u16>(&audio_device, &audio_config.into(), options)
+                    }
+                    // cpal::SampleFormat::U24 => run::<U24>(&device, &config.into()),
+                    cpal::SampleFormat::U32 => {
+                        run_audio::<u32>(&audio_device, &audio_config.into(), options)
+                    }
+                    // cpal::SampleFormat::U48 => run::<U48>(&device, &config.into()),
+                    cpal::SampleFormat::U64 => {
+                        run_audio::<u64>(&audio_device, &audio_config.into(), options)
+                    }
+                    cpal::SampleFormat::F32 => {
+                        run_audio::<f32>(&audio_device, &audio_config.into(), options)
+                    }
+                    cpal::SampleFormat::F64 => {
+                        run_audio::<f64>(&audio_device, &audio_config.into(), options)
+                    }
+                    sample_format => panic!("Unsupported sample format '{sample_format}'"),
                 }
-                cpal::SampleFormat::I16 => {
-                    run_audio::<i16>(&audio_device, &audio_config.into(), options)
-                }
-                // cpal::SampleFormat::I24 => run::<I24>(&device, &config.into()),
-                cpal::SampleFormat::I32 => {
-                    run_audio::<i32>(&audio_device, &audio_config.into(), options)
-                }
-                // cpal::SampleFormat::I48 => run::<I48>(&device, &config.into()),
-                cpal::SampleFormat::I64 => {
-                    run_audio::<i64>(&audio_device, &audio_config.into(), options)
-                }
-                cpal::SampleFormat::U8 => {
-                    run_audio::<u8>(&audio_device, &audio_config.into(), options)
-                }
-                cpal::SampleFormat::U16 => {
-                    run_audio::<u16>(&audio_device, &audio_config.into(), options)
-                }
-                // cpal::SampleFormat::U24 => run::<U24>(&device, &config.into()),
-                cpal::SampleFormat::U32 => {
-                    run_audio::<u32>(&audio_device, &audio_config.into(), options)
-                }
-                // cpal::SampleFormat::U48 => run::<U48>(&device, &config.into()),
-                cpal::SampleFormat::U64 => {
-                    run_audio::<u64>(&audio_device, &audio_config.into(), options)
-                }
-                cpal::SampleFormat::F32 => {
-                    run_audio::<f32>(&audio_device, &audio_config.into(), options)
-                }
-                cpal::SampleFormat::F64 => {
-                    run_audio::<f64>(&audio_device, &audio_config.into(), options)
-                }
-                sample_format => panic!("Unsupported sample format '{sample_format}'"),
-            }
-        });
+            });
+        }
 
         Self {
             surface,
@@ -193,7 +200,9 @@ impl Renderer {
             // bpm: 120.,
             cursors,
             modifiers: HashSet::new(),
+            #[cfg(not(target_arch = "wasm32"))]
             shared_string,
+            #[cfg(not(target_arch = "wasm32"))]
             has_update,
         }
     }
@@ -202,10 +211,10 @@ impl Renderer {
         &self.window
     }
 
-    #[cfg(target_arch = "wasm32")]
-    pub fn add_audio_engine(&mut self, engine: Rc<RefCell<glicol::Engine<128>>>) {
-        self.audio_engine = Some(engine);
-    }
+    // #[cfg(target_arch = "wasm32")]
+    // pub fn add_audio_engine(&mut self, engine: Rc<RefCell<glicol::Engine<128>>>) {
+    //     self.audio_engine = Some(engine);
+    // }
 
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
         if new_size.width > 0 && new_size.height > 0 {

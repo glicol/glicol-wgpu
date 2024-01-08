@@ -1,1 +1,5 @@
 /target
+
+# ignore any wasm files in any directory
+**/*.wasm
+glicol_wgpu.js
